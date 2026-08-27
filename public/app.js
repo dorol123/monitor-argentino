@@ -55,12 +55,23 @@ function fmtInt(n) {
   return n == null ? '—' : Number(n).toLocaleString('es-AR');
 }
 
+// Monto operado = nominales * precio por nominal, en la divisa del bono.
+function fmtMonto(nominales, price, currency) {
+  if (nominales == null || price == null) return '—';
+  const monto = nominales * price;
+  const symbol = currency === 'ARS' ? '$' : 'U$S';
+  return `${symbol} ${Number(monto).toLocaleString('es-AR', { maximumFractionDigits: 0 })}`;
+}
+
 async function fetchBonds() {
   try {
     const res = await fetch('/api/ons');
     const json = await res.json();
     if (!res.ok) throw new Error(json.message || json.error || 'Error');
-    state.bonds = json.data;
+    state.bonds = json.data.map(b => ({
+      ...b,
+      monto: (b.volume != null && b.last != null) ? b.volume * b.last : null,
+    }));
     setStatus('ok', `Actualizado ${new Date(json.updatedAt).toLocaleTimeString('es-AR')}`);
   } catch (e) {
     setStatus('error', `Error: ${e.message}`);
@@ -79,8 +90,8 @@ const ARBITRAJE_MIN_VOLUMEN_ARS = 600000;
 
 function isArbitraje(b) {
   if (b.spread == null || b.spread <= ARBITRAJE_MIN_SPREAD) return false;
-  const minVolumen = b.currency === 'ARS' ? ARBITRAJE_MIN_VOLUMEN_ARS : ARBITRAJE_MIN_VOLUMEN_USD;
-  return b.volume != null && b.volume > minVolumen;
+  const minMonto = b.currency === 'ARS' ? ARBITRAJE_MIN_VOLUMEN_ARS : ARBITRAJE_MIN_VOLUMEN_USD;
+  return b.monto != null && b.monto > minMonto;
 }
 
 function getRows() {
@@ -134,7 +145,7 @@ function render() {
         <td class="num">${fmtPrice(b.px_bid)}</td>
         <td class="num">${fmtPrice(b.px_ask)}</td>
         <td class="num">${fmtSpread(b.spread)}</td>
-        <td class="num">${fmtInt(b.volume)}</td>
+        <td class="num">${fmtMonto(b.volume, b.last, b.currency)}</td>
         <td><button class="star-btn ${watched ? 'active' : ''}" data-symbol="${b.symbol}" title="Agregar/quitar de seguimiento">${watched ? '★' : '☆'}</button></td>
       </tr>
     `;
