@@ -10,6 +10,7 @@
     "node": ">=18"
   },
   "dependencies": {
+    "@libsql/client": "^0.17.4",
     "cookie-parser": "^1.4.7",
     "express": "^4.19.2"
   },

@@ -2,9 +2,14 @@ const express = require('express');
 const path = require('path');
 const crypto = require('crypto');
 const cookieParser = require('cookie-parser');
+const db = require('./db');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+
+// Ping gratuito (sin auth) para mantener despierto el servicio en Render free
+// y que el poller de histórico no se corte por inactividad.
+app.get('/healthz', (req, res) => res.status(200).send('ok'));
 
 const SITE_PASSWORD = process.env.SITE_PASSWORD || '000';
 const SESSION_SECRET = crypto.randomBytes(32).toString('hex');
@@ -111,6 +116,84 @@ app.get('/api/ons', async (req, res) => {
     res.json({ data, updatedAt: new Date(ts).toISOString() });
   } catch (e) {
     res.status(502).json({ error: 'No se pudo obtener la cotización de data912', message: e.message });
+  }
+});
+
+// Histórico: "rolling" guarda una foto cada 20s y retiene 48hs;
+// "daily" guarda 3 fotos por día y se conserva indefinidamente.
+const ROLLING_TABLE = 'snapshots';
+const DAILY_TABLE = 'snapshots_daily';
+const ROLLING_RETENTION_MS = 48 * 60 * 60 * 1000;
+const DAILY_QUERY_WINDOW_MS = 400 * 24 * 60 * 60 * 1000; // ~13 meses hacia atrás
+const POLL_MS = 20 * 1000;
+const PRUNE_EVERY_TICKS = 30; // podar cada ~10 min
+const DAILY_SLOTS_AR = ['11:00', '14:00', '17:00']; // hora Argentina
+
+let pollTick = 0;
+let lastDailySlotKey = null;
+
+function arTimeParts(ts) {
+  const d = new Date(ts);
+  const hhmm = d.toLocaleTimeString('en-GB', { timeZone: 'America/Argentina/Buenos_Aires', hour: '2-digit', minute: '2-digit' });
+  const dateKey = d.toLocaleDateString('en-CA', { timeZone: 'America/Argentina/Buenos_Aires' });
+  return { hhmm, dateKey };
+}
+
+async function pollAndStore() {
+  let data, ts;
+  try {
+    ({ data, ts } = await getLiveCorp());
+  } catch (e) {
+    console.error('Poller: no se pudo obtener data912:', e.message);
+    return;
+  }
+
+  try {
+    await db.insertSnapshot(ROLLING_TABLE, data, ts);
+    pollTick++;
+    if (pollTick % PRUNE_EVERY_TICKS === 0) {
+      await db.pruneOlderThan(ROLLING_TABLE, Date.now() - ROLLING_RETENTION_MS);
+    }
+  } catch (e) {
+    console.error('Poller: error guardando snapshot rolling:', e.message);
+  }
+
+  const { hhmm, dateKey } = arTimeParts(ts);
+  const slotKey = `${dateKey} ${hhmm}`;
+  if (DAILY_SLOTS_AR.includes(hhmm) && slotKey !== lastDailySlotKey) {
+    lastDailySlotKey = slotKey;
+    try {
+      await db.insertSnapshot(DAILY_TABLE, data, ts);
+    } catch (e) {
+      console.error('Poller: error guardando snapshot diario:', e.message);
+    }
+  }
+}
+
+if (db.enabled) {
+  db.init()
+    .then(() => {
+      console.log('Histórico Turso listo. Guardando snapshot cada 20s (retención 48hs) y 3x/día (largo plazo).');
+      pollAndStore();
+      setInterval(pollAndStore, POLL_MS);
+    })
+    .catch(e => console.error('No se pudo inicializar Turso:', e.message));
+} else {
+  console.log('TURSO_DATABASE_URL / TURSO_AUTH_TOKEN no configurados: histórico deshabilitado.');
+}
+
+app.get('/api/history/:symbol', async (req, res) => {
+  if (!db.enabled) return res.status(503).json({ error: 'Histórico no configurado en este deploy' });
+
+  const symbol = req.params.symbol.trim().toUpperCase();
+  const table = req.query.range === 'monthly' ? DAILY_TABLE : ROLLING_TABLE;
+  const sinceTs = table === DAILY_TABLE ? Date.now() - DAILY_QUERY_WINDOW_MS : Date.now() - ROLLING_RETENTION_MS;
+
+  try {
+    const rows = await db.history(table, symbol, sinceTs);
+    res.json({ symbol, range: table === DAILY_TABLE ? 'monthly' : 'rolling48h', rows });
+  } catch (e) {
+    res.status(502).json({ error: 'Error consultando histórico', message: e.message });
   }
 });
 
