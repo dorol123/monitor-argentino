@@ -16,6 +16,8 @@ const els = {
   rows: document.getElementById('rows'),
   statusDot: document.getElementById('status-dot'),
   statusText: document.getElementById('status-text'),
+  marketDot: document.getElementById('market-dot'),
+  marketText: document.getElementById('market-text'),
   search: document.getElementById('search'),
   hideUnoperated: document.getElementById('hide-unoperated'),
   tabs: document.querySelectorAll('.tab'),
@@ -84,6 +86,15 @@ async function fetchBonds() {
 function setStatus(kind, text) {
   els.statusDot.className = `dot ${kind}`;
   els.statusText.textContent = text;
+}
+
+function updateMarketStatus() {
+  const hhmm = new Date().toLocaleTimeString('en-GB', {
+    timeZone: 'America/Argentina/Buenos_Aires', hour: '2-digit', minute: '2-digit',
+  });
+  const open = hhmm >= '10:30' && hhmm < '17:00';
+  els.marketDot.className = `neon-dot ${open ? 'open' : 'closed'}`;
+  els.marketText.textContent = open ? 'Mercado abierto' : 'Mercado cerrado';
 }
 
 const ARBITRAJE_MIN_SPREAD = 1; // %
@@ -201,3 +212,6 @@ els.headers.forEach(th => {
 
 fetchBonds();
 setInterval(fetchBonds, REFRESH_MS);
+
+updateMarketStatus();
+setInterval(updateMarketStatus, 30 * 1000);
