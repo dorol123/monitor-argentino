@@ -238,6 +238,20 @@ app.get('/api/debug/poller', (req, res) => {
   res.json({ dbEnabled: db.enabled, lastStateSize: lastState.size, ...pollerDebug });
 });
 
+// Borra operaciones de la tabla rolling (48hs) anteriores a un timestamp dado.
+// POST /api/debug/purge-rolling?before=<epoch ms>
+app.post('/api/debug/purge-rolling', async (req, res) => {
+  if (!db.enabled) return res.status(503).json({ error: 'Histórico no configurado' });
+  const beforeTs = Number(req.query.before);
+  if (!beforeTs) return res.status(400).json({ error: 'Falta ?before=<epoch ms>' });
+  try {
+    await db.pruneOlderThan(ROLLING_TABLE, beforeTs);
+    res.json({ success: true, table: ROLLING_TABLE, beforeTs, beforeIso: new Date(beforeTs).toISOString() });
+  } catch (e) {
+    res.status(502).json({ error: e.message });
+  }
+});
+
 app.get('/api/history/:symbol', async (req, res) => {
   if (!db.enabled) return res.status(503).json({ error: 'Histórico no configurado en este deploy' });
 
