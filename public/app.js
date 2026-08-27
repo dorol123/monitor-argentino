@@ -9,6 +9,7 @@ const state = {
   sortKey: 'symbol',
   sortDir: 1,
   watchlist: loadWatchlist(),
+  hideUnoperated: true,
 };
 
 const els = {
@@ -16,6 +17,7 @@ const els = {
   statusDot: document.getElementById('status-dot'),
   statusText: document.getElementById('status-text'),
   search: document.getElementById('search'),
+  hideUnoperated: document.getElementById('hide-unoperated'),
   tabs: document.querySelectorAll('.tab'),
   segments: document.querySelectorAll('.segment'),
   headers: document.querySelectorAll('th[data-sort]'),
@@ -101,6 +103,8 @@ function getRows() {
 
   if (state.tab === 'watchlist') rows = rows.filter(b => state.watchlist.has(b.symbol));
 
+  if (state.hideUnoperated) rows = rows.filter(b => b.volume != null && b.volume > 0);
+
   if (state.search.trim()) {
     const q = state.search.trim().toLowerCase();
     rows = rows.filter(b => b.symbol.toLowerCase().includes(q));
@@ -127,7 +131,9 @@ function render() {
         ? 'Sin oportunidades ahora mismo (spread > 1% y volumen mínimo).'
         : state.tab === 'watchlist'
           ? 'Sin ONs en seguimiento en este segmento. Andá a "Todas" y tocá la ⭐ para agregar.'
-          : 'Sin resultados para tu búsqueda.';
+          : state.hideUnoperated
+            ? 'Nada operado en este segmento todavía. Destildá "Ocultar no operados" para ver todo.'
+            : 'Sin resultados para tu búsqueda.';
     els.rows.innerHTML = `<tr><td colspan="8" class="empty">${msg}</td></tr>`;
     return;
   }
@@ -176,6 +182,11 @@ els.tabs.forEach(tab => {
 
 els.search.addEventListener('input', (e) => {
   state.search = e.target.value;
+  render();
+});
+
+els.hideUnoperated.addEventListener('change', (e) => {
+  state.hideUnoperated = e.target.checked;
   render();
 });
 
