@@ -47,6 +47,10 @@ function fmtPct(n) {
   return `${sign}${Number(n).toFixed(2)}%`;
 }
 
+function fmtSpread(n) {
+  return n == null ? '—' : `${Number(n).toFixed(2)}%`;
+}
+
 function fmtInt(n) {
   return n == null ? '—' : Number(n).toLocaleString('es-AR');
 }
@@ -69,8 +73,20 @@ function setStatus(kind, text) {
   els.statusText.textContent = text;
 }
 
+const ARBITRAJE_MIN_SPREAD = 1; // %
+const ARBITRAJE_MIN_VOLUMEN_USD = 500;
+const ARBITRAJE_MIN_VOLUMEN_ARS = 600000;
+
+function isArbitraje(b) {
+  if (b.spread == null || b.spread <= ARBITRAJE_MIN_SPREAD) return false;
+  const minVolumen = b.currency === 'ARS' ? ARBITRAJE_MIN_VOLUMEN_ARS : ARBITRAJE_MIN_VOLUMEN_USD;
+  return b.volume != null && b.volume > minVolumen;
+}
+
 function getRows() {
-  let rows = state.bonds.filter(b => b.segment === state.segment);
+  let rows = state.segment === 'ARBITRAJES'
+    ? state.bonds.filter(isArbitraje)
+    : state.bonds.filter(b => b.segment === state.segment);
 
   if (state.tab === 'watchlist') rows = rows.filter(b => state.watchlist.has(b.symbol));
 
@@ -96,23 +112,28 @@ function render() {
   if (rows.length === 0) {
     const msg = state.bonds.length === 0
       ? 'Cargando cotizaciones...'
-      : state.tab === 'watchlist'
-        ? 'Sin ONs en seguimiento en este segmento. Andá a "Todas" y tocá la ⭐ para agregar.'
-        : 'Sin resultados para tu búsqueda.';
-    els.rows.innerHTML = `<tr><td colspan="7" class="empty">${msg}</td></tr>`;
+      : state.segment === 'ARBITRAJES'
+        ? 'Sin oportunidades ahora mismo (spread > 1% y volumen mínimo).'
+        : state.tab === 'watchlist'
+          ? 'Sin ONs en seguimiento en este segmento. Andá a "Todas" y tocá la ⭐ para agregar.'
+          : 'Sin resultados para tu búsqueda.';
+    els.rows.innerHTML = `<tr><td colspan="8" class="empty">${msg}</td></tr>`;
     return;
   }
+
+  const segmentLabel = { ARS: 'Pesos', MEP: 'MEP', CABLE: 'Cable' };
 
   els.rows.innerHTML = rows.map(b => {
     const pctClass = b.pct_change > 0 ? 'pct-up' : b.pct_change < 0 ? 'pct-down' : 'pct-flat';
     const watched = state.watchlist.has(b.symbol);
     return `
       <tr>
-        <td class="symbol">${b.symbol}</td>
+        <td class="symbol">${b.symbol}${state.segment === 'ARBITRAJES' ? ` <span class="badge">${segmentLabel[b.segment]}</span>` : ''}</td>
         <td class="num">${fmtPrice(b.last)}</td>
         <td class="num ${pctClass}">${fmtPct(b.pct_change)}</td>
         <td class="num">${fmtPrice(b.px_bid)}</td>
         <td class="num">${fmtPrice(b.px_ask)}</td>
+        <td class="num">${fmtSpread(b.spread)}</td>
         <td class="num">${fmtInt(b.volume)}</td>
         <td><button class="star-btn ${watched ? 'active' : ''}" data-symbol="${b.symbol}" title="Agregar/quitar de seguimiento">${watched ? '★' : '☆'}</button></td>
       </tr>

@@ -10,7 +10,7 @@
   <header class="header">
     <div>
       <h1>Monitor Argentino</h1>
-      <p class="subtitle">Obligaciones Negociables en vivo · fuente: data912</p>
+      <p class="subtitle">Obligaciones Negociables en vivo</p>
     </div>
     <div class="status">
       <span id="status-dot" class="dot"></span>
@@ -23,6 +23,7 @@
       <button class="segment active" data-segment="ARS">Pesos</button>
       <button class="segment" data-segment="MEP">Dólar MEP</button>
       <button class="segment" data-segment="CABLE">Dólar Cable</button>
+      <button class="segment" data-segment="ARBITRAJES">⚡ Arbitrajes</button>
     </div>
 
     <div class="toolbar">
@@ -42,12 +43,13 @@
             <th data-sort="pct_change" class="num">Var %</th>
             <th data-sort="px_bid" class="num">Compra</th>
             <th data-sort="px_ask" class="num">Venta</th>
+            <th data-sort="spread" class="num">Spread</th>
             <th data-sort="volume" class="num">Volumen</th>
             <th></th>
           </tr>
         </thead>
         <tbody id="rows">
-          <tr><td colspan="7" class="empty">Cargando cotizaciones...</td></tr>
+          <tr><td colspan="8" class="empty">Cargando cotizaciones...</td></tr>
         </tbody>
       </table>
     </div>

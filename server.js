@@ -26,6 +26,11 @@ async function getLiveCorp() {
       if (b.symbol.endsWith('D')) { segment = 'MEP'; currency = 'USD'; }
       else if (b.symbol.endsWith('C')) { segment = 'CABLE'; currency = 'USD'; }
 
+      // Spread entre puntas, como % sobre la punta compradora
+      const spread = (b.px_bid > 0 && b.px_ask != null)
+        ? ((b.px_ask - b.px_bid) / b.px_bid) * 100
+        : null;
+
       return {
         symbol: b.symbol,
         segment,
@@ -37,6 +42,7 @@ async function getLiveCorp() {
         q_ask: b.q_ask,
         volume: b.v,
         pct_change: b.pct_change,
+        spread,
       };
     })
     .sort((a, b) => a.symbol.localeCompare(b.symbol));
