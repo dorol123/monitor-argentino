@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>MonitARG — Obligaciones Negociables argentinas en vivo</title>
+<meta name="description" content="Cotizaciones en vivo de Obligaciones Negociables argentinas: Pesos, Dólar MEP y Dólar Cable, con spread, histórico de operaciones reales y ranking de arbitraje." />
+<style>
+  :root {
+    --bg: #0b1220;
+    --bg-alt: #0f1b2d;
+    --panel: #101c30;
+    --border: #1e2c42;
+    --text: #e7ecf5;
+    --text-dim: #8b98ac;
+    --accent: #34d399;
+    --accent-dim: #10b981;
+    --red: #f87171;
+    --amber: #fbbf24;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { color: #6ee7b7; }
+
+  .btn-primary {
+    background: var(--accent-dim); color: #04201a; font-weight: 700;
+    padding: 14px 28px; border-radius: 12px; font-size: 0.95rem;
+    display: inline-flex; align-items: center; gap: 8px;
+    box-shadow: 0 0 0 0 rgba(52,211,153,0.5);
+    transition: box-shadow 0.25s, transform 0.15s, background 0.15s;
+    border: none; cursor: pointer;
+  }
+  .btn-primary:hover { color: #04201a; background: var(--accent); box-shadow: 0 0 0 6px rgba(52,211,153,0.14); transform: translateY(-1px); }
+
+  .hero-grid { display:grid; grid-template-columns: 1.05fr 0.95fr; gap:56px; align-items:center; }
+  .features-grid { display:grid; grid-template-columns: 1.3fr 1fr 1fr; grid-template-rows: auto auto; gap:16px; }
+  .feat-spotlight-wrap { grid-row: span 2; }
+  .nav-links { display:flex; align-items:center; gap:22px; }
+  .cta-band { display:flex; align-items:center; justify-content:space-between; gap:24px; flex-wrap:wrap; }
+
+  .logo-mark {
+    display:flex; align-items:center; gap:6px; font-size:1.1rem; font-weight:800;
+    letter-spacing:-0.01em; color: var(--text);
+  }
+  .logo-mark:hover { color: var(--text); }
+  .logo-mark .bracket { color: var(--accent); font-weight:400; }
+  .logo-mark .accent { color: var(--accent); }
+
+  @media (max-width: 860px) {
+    .hero-grid { grid-template-columns: 1fr; gap:36px; }
+    .features-grid { grid-template-columns: 1fr; }
+    .feat-spotlight-wrap { grid-row: auto; }
+    [data-parallax] { transform: none !important; }
+    .nav-links a:not(.btn-primary) { display:none; }
+    h1 { font-size:1.9rem !important; }
+    .cta-band { justify-content:center; text-align:center; }
+  }
+
+  .feat-card {
+    background: var(--panel); border: 1px solid var(--border); border-radius: 16px; padding: 24px;
+    transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+  }
+  .feat-card:hover {
+    transform: translateY(-3px);
+    border-color: rgba(52,211,153,0.4);
+    box-shadow: 0 16px 40px -16px rgba(0,0,0,0.55), 0 0 0 1px rgba(52,211,153,0.08);
+  }
+
+  .seg-tab {
+    border: 1px solid var(--border); background: transparent; color: var(--text-dim);
+    font-size: 0.76rem; font-weight: 700; padding: 7px 13px; border-radius: 9px; cursor: pointer;
+    transition: all 0.15s ease;
+  }
+  .seg-tab:hover { color: var(--text); border-color: rgba(52,211,153,0.35); }
+  .seg-tab.active { background: var(--accent-dim); color: #04201a; border-color: var(--accent-dim); }
+
+  .range-tab {
+    border: none; background: transparent; color: var(--text-dim); font-size: 0.72rem; font-weight: 700;
+    padding: 5px 11px; border-radius: 7px; cursor: pointer; transition: all 0.15s ease;
+  }
+  .range-tab.active { background: rgba(255,255,255,0.08); color: var(--text); }
+
+  .row-op { transition: background 0.2s; border-radius: 8px; }
+  .row-bid { background: linear-gradient(90deg, rgba(52,211,153,0.14), transparent 70%); }
+  .row-ask { background: linear-gradient(90deg, rgba(248,113,113,0.14), transparent 70%); }
+
+  .neon-dot {
+    width: 9px; height: 9px; border-radius: 50%; display: inline-block;
+    background: #39ff6a; box-shadow: 0 0 4px 1px #39ff6a, 0 0 12px 4px rgba(57,255,106,0.6);
+    animation: pulse 2.2s ease-in-out infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.55; transform: scale(0.82); }
+  }
+
+  .blob {
+    position: absolute; border-radius: 50%; filter: blur(64px); pointer-events: none;
+    animation: drift 16s ease-in-out infinite;
+  }
+  @keyframes drift {
+    0%, 100% { transform: translate(0, 0) scale(1); }
+    50% { transform: translate(30px, -24px) scale(1.08); }
+  }
+
+  .sparkline-path { stroke-dasharray: 500; stroke-dashoffset: 500; animation: draw 1.4s ease forwards 0.3s; }
+  @keyframes draw { to { stroke-dashoffset: 0; } }
+
+  /* Scroll reveals: cada variante entra distinto */
+  [data-reveal] { opacity: 0; }
+  [data-reveal].in-view { opacity: 1; }
+
+  [data-reveal="up"] { transform: translateY(36px); transition: opacity 0.6s ease, transform 0.6s cubic-bezier(.16,.84,.44,1); }
+  [data-reveal="up"].in-view { transform: translateY(0); }
+
+  [data-reveal="left"] { transform: translateX(-52px); transition: opacity 0.6s ease, transform 0.6s cubic-bezier(.16,.84,.44,1); }
+  [data-reveal="left"].in-view { transform: translateX(0); }
+
+  [data-reveal="right"] { transform: translateX(52px); transition: opacity 0.6s ease, transform 0.6s cubic-bezier(.16,.84,.44,1); }
+  [data-reveal="right"].in-view { transform: translateX(0); }
+
+  [data-reveal="scale"] { transform: scale(0.88); transition: opacity 0.55s ease, transform 0.55s cubic-bezier(.16,.84,.44,1); }
+  [data-reveal="scale"].in-view { transform: scale(1); }
+
+  /* "caída" con un pequeño rebote al asentarse */
+  [data-reveal="drop"] { transform: translateY(-46px) rotate(-2.5deg); transition: opacity 0.65s ease, transform 0.7s cubic-bezier(.34,1.56,.64,1); }
+  [data-reveal="drop"].in-view { transform: translateY(0) rotate(0deg); }
+
+  [data-reveal="drop-right"] { transform: translateY(-46px) rotate(2.5deg); transition: opacity 0.65s ease, transform 0.7s cubic-bezier(.34,1.56,.64,1); }
+  [data-reveal="drop-right"].in-view { transform: translateY(0) rotate(0deg); }
+
+  /* Caída con rebote para lo que entra apenas carga la página (hero) */
+  @keyframes dropInBounce {
+    0% { opacity: 0; transform: translateY(-64px) rotate(-3deg); }
+    60% { opacity: 1; transform: translateY(8px) rotate(0.5deg); }
+    100% { opacity: 1; transform: translateY(0) rotate(0deg); }
+  }
+  .drop-in { animation: dropInBounce 0.9s cubic-bezier(.34,1.56,.64,1) both; }
+
+  .gradient-text {
+    background: linear-gradient(90deg, var(--accent), #a7f3d0);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+
+  .btn-primary { position: relative; overflow: hidden; }
+  .btn-primary::after {
+    content: ""; position: absolute; top: 0; left: -60%; width: 40%; height: 100%;
+    background: linear-gradient(120deg, transparent, rgba(255,255,255,0.4), transparent);
+    transform: skewX(-20deg); animation: shimmer 3.4s ease-in-out infinite;
+  }
+  @keyframes shimmer {
+    0% { left: -60%; }
+    55% { left: 130%; }
+    100% { left: 130%; }
+  }
+
+  .scroll-cue {
+    display: flex; flex-direction: column; align-items: center; gap: 6px;
+    color: var(--text-dim); font-size: 0.68rem; letter-spacing: 0.04em; text-transform: uppercase;
+    animation: cueBounce 1.8s ease-in-out infinite; margin: 8px auto 0; width: fit-content;
+  }
+  @keyframes cueBounce {
+    0%, 100% { transform: translateY(0); opacity: 0.7; }
+    50% { transform: translateY(7px); opacity: 1; }
+  }
+</style>
+</head>
+<body>
+
+<div style="position:relative; overflow:hidden; background: linear-gradient(180deg, #0b1220 0%, #0f1b2d 100%); color: var(--text); min-height: 100vh; width: 100%;">
+
+  <div class="blob" style="width:420px; height:420px; top:-120px; left:-80px; background:radial-gradient(circle, rgba(52,211,153,0.22), transparent 70%);"></div>
+  <div class="blob" style="width:360px; height:360px; top:120px; right:-100px; background:radial-gradient(circle, rgba(16,185,129,0.16), transparent 70%); animation-delay:-6s;"></div>
+
+  <div style="position:relative;">
+
+    <!-- Nav -->
+    <div style="display:flex; align-items:center; justify-content:space-between; max-width:1160px; margin:0 auto; padding:22px 24px;">
+      <div style="display:flex; align-items:center; gap:10px;">
+        <div class="logo-mark">
+          <span class="bracket">‹</span>
+          <span>Monit<span class="accent">ARG</span></span>
+          <span class="bracket">›</span>
+        </div>
+        <span class="neon-dot" style="width:7px; height:7px;"></span>
+      </div>
+      <div class="nav-links" style="font-size:0.85rem;">
+        <a href="/app" style="color:var(--text-dim);">Cotizaciones</a>
+        <a href="/historia.html" style="color:var(--text-dim);">📈 Históricas</a>
+        <a href="/benchmark.html" style="color:var(--text-dim);">🏆 Benchmark</a>
+        <a href="/app" class="btn-primary" style="padding:9px 18px; font-size:0.85rem;">Entrar al monitor</a>
+      </div>
+    </div>
+
+    <!-- Hero -->
+    <div class="hero-grid" style="max-width:1160px; margin:0 auto; padding:48px 24px 72px;">
+      <div class="drop-in">
+        <div style="display:inline-flex; align-items:center; gap:8px; background:rgba(52,211,153,0.08); border:1px solid rgba(52,211,153,0.25); color:var(--accent); font-size:0.75rem; font-weight:700; padding:6px 14px; border-radius:999px; margin-bottom:20px;">
+          Sin cuenta de broker · Actualiza cada 20s
+        </div>
+        <h1 style="font-size:2.6rem; line-height:1.12; font-weight:800; letter-spacing:-0.02em; margin:0 0 20px;">
+          Todas las Obligaciones Negociables argentinas, <span class="gradient-text">en vivo y en un solo lugar</span>.
+        </h1>
+        <p style="font-size:1.05rem; line-height:1.6; color:var(--text-dim); margin:0 0 32px; max-width:480px;">
+          Cotizaciones de +600 ONs separadas por Pesos, Dólar MEP y Dólar Cable, con spread, histórico de operaciones reales y un ranking de oportunidades de arbitraje. Todo actualizado directo desde el mercado.
+        </p>
+        <div style="display:flex; align-items:center; gap:16px;">
+          <a href="/app" class="btn-primary">
+            Entrar al monitor
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+          </a>
+          <span style="font-size:0.82rem; color:var(--text-dim);">No hace falta registrarte con tu bróker</span>
+        </div>
+      </div>
+
+      <!-- Live preview card (interactivo) -->
+      <div class="drop-in" style="animation-delay:0.15s; background:var(--panel); border:1px solid var(--border); border-radius:20px; padding:22px; box-shadow:0 24px 60px -20px rgba(0,0,0,0.6);">
+        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:14px;">
+          <span style="font-size:0.72rem; font-weight:700; text-transform:uppercase; letter-spacing:0.04em; color:var(--text-dim);">Vista de ejemplo</span>
+          <span style="display:flex; align-items:center; gap:7px; font-size:0.76rem; font-weight:600; color:var(--text-dim);">
+            <span class="neon-dot" style="width:8px; height:8px;"></span>
+            Mercado abierto
+          </span>
+        </div>
+
+        <div id="preview-seg-tabs" style="display:flex; gap:6px; margin-bottom:14px;"></div>
+
+        <div id="preview-rows" style="display:flex; flex-direction:column; gap:2px;"></div>
+
+        <div style="margin-top:14px; padding-top:14px; border-top:1px solid var(--border);">
+          <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:6px;">
+            <span style="font-size:0.7rem; color:var(--text-dim);">Evolución de precio (ejemplo)</span>
+            <div id="preview-range-tabs" style="display:flex; gap:2px; background:rgba(255,255,255,0.04); border-radius:8px; padding:2px;"></div>
+          </div>
+          <svg viewBox="0 0 300 60" width="100%" height="60" preserveAspectRatio="none">
+            <polyline id="preview-sparkline" class="sparkline-path" points="" fill="none" stroke="#34d399" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />
+          </svg>
+        </div>
+      </div>
+    </div>
+
+    <div class="scroll-cue">
+      Mirá el resto
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+    </div>
+
+    <!-- Features (bento) -->
+    <div style="max-width:1160px; margin:0 auto; padding:8px 24px 72px;">
+      <h2 data-reveal="up" style="font-size:1.5rem; font-weight:800; letter-spacing:-0.01em; margin:0 0 6px;">Cuatro formas de leer el mercado de deuda corporativa</h2>
+      <p data-reveal="up" style="transition-delay:0.06s; font-size:0.95rem; color:var(--text-dim); margin:0 0 36px; max-width:560px;">Nada de planillas armadas a mano. El monitor separa, guarda y ordena la información por vos.</p>
+
+      <div class="features-grid">
+
+        <div class="feat-spotlight-wrap" data-parallax="0.05" style="will-change: transform;">
+          <div class="feat-card" data-reveal="scale" style="display:flex; flex-direction:column; height:100%;">
+            <div style="width:40px; height:40px; border-radius:10px; background:rgba(52,211,153,0.1); display:flex; align-items:center; justify-content:center; margin-bottom:16px; font-size:1.1rem;">🏆</div>
+            <h3 style="font-size:1.1rem; font-weight:700; margin:0 0 10px;">Benchmark de arbitraje</h3>
+            <p style="font-size:0.88rem; line-height:1.6; color:var(--text-dim); margin:0 0 20px;">Rankea las ONs por oportunidad real, no solo por spread: cruza el monto operado en la punta compradora y en la vendedora — si un lado no tuvo flujo, esa ON queda penalizada aunque el spread sea enorme.</p>
+            <div style="margin-top:auto; display:flex; flex-direction:column; gap:8px;">
+              <div class="row-op row-bid" style="display:flex; justify-content:space-between; padding:9px 10px; font-size:0.82rem;">
+                <span style="font-weight:700;">GN48O</span>
+                <span style="color:var(--text-dim);">EAO $329.071</span>
+              </div>
+              <div class="row-op row-ask" style="display:flex; justify-content:space-between; padding:9px 10px; font-size:0.82rem;">
+                <span style="font-weight:700;">BYCVO</span>
+                <span style="color:var(--text-dim);">EAO $613.373</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div data-parallax="-0.09" style="will-change: transform;">
+          <div class="feat-card" data-reveal="drop" style="transition-delay:0.08s;">
+            <div style="width:38px; height:38px; border-radius:10px; background:rgba(52,211,153,0.1); display:flex; align-items:center; justify-content:center; margin-bottom:14px; font-size:1.05rem;">📈</div>
+            <h3 style="font-size:1.02rem; font-weight:700; margin:0 0 8px;">Cotizaciones históricas</h3>
+            <p style="font-size:0.86rem; line-height:1.55; color:var(--text-dim); margin:0;">Cada operación real queda registrada con su lado — compra o venta — marcada en la tabla y el gráfico.</p>
+          </div>
+        </div>
+
+        <div data-parallax="0.12" style="will-change: transform;">
+          <div class="feat-card" data-reveal="drop-right" style="transition-delay:0.16s;">
+            <div style="width:38px; height:38px; border-radius:10px; background:rgba(52,211,153,0.1); display:flex; align-items:center; justify-content:center; margin-bottom:14px; font-size:1.05rem;">⚡</div>
+            <h3 style="font-size:1.02rem; font-weight:700; margin:0 0 8px;">Arbitrajes</h3>
+            <p style="font-size:0.86rem; line-height:1.55; color:var(--text-dim); margin:0;">Filtra sola las ONs con spread mayor a 1% y volumen mínimo, cruzando los tres segmentos a la vez.</p>
+          </div>
+        </div>
+
+        <div data-parallax="-0.16" style="will-change: transform;">
+          <div class="feat-card" data-reveal="drop" style="transition-delay:0.24s;">
+            <div style="width:38px; height:38px; border-radius:10px; background:rgba(52,211,153,0.1); display:flex; align-items:center; justify-content:center; margin-bottom:14px;">
+              <span class="neon-dot" style="width:11px; height:11px; animation:none;"></span>
+            </div>
+            <h3 style="font-size:1.02rem; font-weight:700; margin:0 0 8px;">Cotizaciones en vivo</h3>
+            <p style="font-size:0.86rem; line-height:1.55; color:var(--text-dim); margin:0;">Precio, puntas, spread y monto operado de todas las ONs, separadas en Pesos, Dólar MEP y Dólar Cable.</p>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- CTA band -->
+    <div style="max-width:1160px; margin:0 auto 72px; padding:0 24px;">
+      <div class="cta-band" data-reveal="drop-right" style="background:linear-gradient(135deg, rgba(52,211,153,0.14), rgba(16,185,129,0.03)); border:1px solid rgba(52,211,153,0.25); border-radius:20px; padding:44px;">
+        <div>
+          <h2 style="font-size:1.3rem; font-weight:800; margin:0 0 6px;">Empezá a seguirlo.</h2>
+          <p style="font-size:0.9rem; color:var(--text-dim); margin:0;">Sin cuenta de broker, actualizado en vivo.</p>
+        </div>
+        <a href="/app" class="btn-primary">
+          Entrar al monitor
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+        </a>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div style="border-top:1px solid var(--border); padding:24px; text-align:center;">
+      <p style="font-size:0.76rem; color:var(--text-dim); margin:0 auto; max-width:560px;">
+        Los datos de mercado provienen de una fuente pública no oficial, pensada para uso educativo/hobby. No la uses como única fuente para decisiones de inversión.
+      </p>
+    </div>
+
+  </div>
+</div>
+
+<script>
+  const SEGMENTS = {
+    ARS: { label: 'Pesos', rows: [
+      { symbol: 'YMCXO', segLabel: 'Pesos', spread: '1,08%', price: '1.538,20', pct: '-0,84%', pctColor: 'var(--red)' },
+      { symbol: 'BYCVO', segLabel: 'Pesos', spread: '2,97%', price: '1.245,50', pct: '+1,20%', pctColor: 'var(--accent)' },
+      { symbol: 'GN48O', segLabel: 'Pesos', spread: '2,66%', price: '980,10', pct: '+0,35%', pctColor: 'var(--accent)' },
+    ]},
+    MEP: { label: 'Dólar MEP', rows: [
+      { symbol: 'AL30D', segLabel: 'MEP', spread: '0,25%', price: '0,9990', pct: '+0,59%', pctColor: 'var(--accent)' },
+      { symbol: 'AEC3D', segLabel: 'MEP', spread: '0,05%', price: '0,9970', pct: '-0,79%', pctColor: 'var(--red)' },
+      { symbol: 'MGCUD', segLabel: 'MEP', spread: '0,10%', price: '1,0000', pct: '+0,39%', pctColor: 'var(--accent)' },
+    ]},
+    CABLE: { label: 'Dólar Cable', rows: [
+      { symbol: 'BF48C', segLabel: 'Cable', spread: '3,65%', price: '0,9675', pct: '+0,21%', pctColor: 'var(--accent)' },
+      { symbol: 'ARC1C', segLabel: 'Cable', spread: '0,44%', price: '1,0255', pct: '-0,12%', pctColor: 'var(--red)' },
+      { symbol: 'CS48C', segLabel: 'Cable', spread: '3,06%', price: '0,9800', pct: '+0,15%', pctColor: 'var(--accent)' },
+    ]},
+  };
+
+  const SPARKLINES = {
+    '48h': '0,42 30,38 60,44 90,30 120,34 150,20 180,26 210,14 240,18 270,8 300,12',
+    'month': '0,20 30,26 60,18 90,30 120,22 150,36 180,28 210,40 240,30 270,44 300,34',
+  };
+
+  let currentSegment = 'ARS';
+  let currentRange = '48h';
+
+  const segTabsEl = document.getElementById('preview-seg-tabs');
+  const rowsEl = document.getElementById('preview-rows');
+  const rangeTabsEl = document.getElementById('preview-range-tabs');
+  const sparklineEl = document.getElementById('preview-sparkline');
+
+  function renderSegTabs() {
+    segTabsEl.innerHTML = Object.keys(SEGMENTS).map(key => `
+      <button type="button" class="seg-tab ${key === currentSegment ? 'active' : ''}" data-segment="${key}">${SEGMENTS[key].label}</button>
+    `).join('');
+    segTabsEl.querySelectorAll('.seg-tab').forEach(btn => {
+      btn.addEventListener('click', () => {
+        currentSegment = btn.dataset.segment;
+        renderSegTabs();
+        renderRows();
+      });
+    });
+  }
+
+  function renderRows() {
+    rowsEl.innerHTML = SEGMENTS[currentSegment].rows.map(row => `
+      <div class="row-op" style="display:flex; align-items:center; justify-content:space-between; padding:12px 8px; border-bottom:1px solid var(--border);">
+        <div>
+          <div style="font-weight:700; font-size:0.92rem;">${row.symbol}</div>
+          <div style="font-size:0.72rem; color:var(--text-dim); margin-top:2px;">${row.segLabel} · Spread ${row.spread}</div>
+        </div>
+        <div style="text-align:right;">
+          <div style="font-weight:700; font-size:0.92rem;">${row.price}</div>
+          <div style="font-size:0.78rem; font-weight:700; margin-top:2px; color:${row.pctColor};">${row.pct}</div>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  function renderRangeTabs() {
+    rangeTabsEl.innerHTML = `
+      <button type="button" class="range-tab ${currentRange === '48h' ? 'active' : ''}" data-range="48h">48hs</button>
+      <button type="button" class="range-tab ${currentRange === 'month' ? 'active' : ''}" data-range="month">Mensual</button>
+    `;
+    rangeTabsEl.querySelectorAll('.range-tab').forEach(btn => {
+      btn.addEventListener('click', () => {
+        currentRange = btn.dataset.range;
+        renderRangeTabs();
+        renderSparkline();
+      });
+    });
+  }
+
+  function renderSparkline() {
+    sparklineEl.setAttribute('points', SPARKLINES[currentRange]);
+  }
+
+  renderSegTabs();
+  renderRows();
+  renderRangeTabs();
+  renderSparkline();
+
+  function setupReveal() {
+    const els = Array.from(document.querySelectorAll('[data-reveal]'));
+    if (els.length === 0) return;
+
+    if (!('IntersectionObserver' in window)) {
+      els.forEach((el) => el.classList.add('in-view'));
+      return;
+    }
+
+    const io = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('in-view');
+          io.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.15, rootMargin: '0px 0px -40px 0px' });
+
+    els.forEach((el) => io.observe(el));
+
+    // red de seguridad: si algo falla, que el contenido no quede invisible
+    setTimeout(() => els.forEach((el) => el.classList.add('in-view')), 4000);
+  }
+
+  function setupParallax() {
+    const layers = Array.from(document.querySelectorAll('[data-parallax]')).map((el) => ({
+      el, factor: parseFloat(el.dataset.parallax) || 0,
+    }));
+    if (layers.length === 0) return;
+
+    let ticking = false;
+    const apply = () => {
+      const y = window.scrollY || window.pageYOffset || 0;
+      layers.forEach(({ el, factor }) => {
+        el.style.transform = `translateY(${(y * factor).toFixed(1)}px)`;
+      });
+      ticking = false;
+    };
+    const onScroll = () => {
+      if (!ticking) {
+        ticking = true;
+        requestAnimationFrame(apply);
+      }
+    };
+
+    window.addEventListener('scroll', onScroll, { passive: true });
+    apply();
+  }
+
+  setupReveal();
+  setupParallax();
+</script>
+</body>
+</html>

@@ -36,6 +36,30 @@ body {
   font-weight: 800;
 }
 
+.logo-mark {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  color: var(--text);
+  text-decoration: none;
+}
+
+a.logo-mark:hover { color: var(--text); }
+
+.logo-mark .bracket { color: var(--accent); font-weight: 400; }
+.logo-mark .accent { color: var(--accent); }
+
+.logo-mark--home {
+  font-size: 1.4rem;
+}
+
+.logo-mark--sm {
+  font-size: 0.95rem;
+  margin-bottom: 6px;
+}
+
 .subtitle {
   margin: 4px 0 0;
   font-size: 0.8rem;

@@ -43,15 +43,24 @@ app.post('/login', (req, res) => {
       sameSite: 'lax',
       maxAge: 30 * 24 * 60 * 60 * 1000,
     });
-    return res.redirect('/');
+    return res.redirect('/app');
   }
   res.redirect('/login?error=1');
+});
+
+// Landing pública: no requiere login. El monitor en sí vive en /app.
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'landing.html'));
 });
 
 app.use((req, res, next) => {
   if (hasValidToken(req.cookies[COOKIE_NAME])) return next();
   if (req.path.startsWith('/api/')) return res.status(401).json({ error: 'No autorizado' });
   return res.redirect('/login');
+});
+
+app.get('/app', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
 const DATA912_URL = 'https://data912.com/live/arg_corp';
