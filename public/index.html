@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Monitor Argentino — Obligaciones Negociables</title>
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="header">
+    <div>
+      <h1>Monitor Argentino</h1>
+      <p class="subtitle">Obligaciones Negociables en vivo · fuente: data912</p>
+    </div>
+    <div class="status">
+      <span id="status-dot" class="dot"></span>
+      <span id="status-text">Cargando...</span>
+    </div>
+  </header>
+
+  <main class="container">
+    <div class="toolbar">
+      <div class="tabs">
+        <button class="tab active" data-tab="watchlist">★ Mi seguimiento</button>
+        <button class="tab" data-tab="all">Todas las ONs</button>
+      </div>
+      <input id="search" type="text" placeholder="Buscar ticker..." autocomplete="off" />
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th data-sort="symbol">Ticker</th>
+            <th data-sort="currency">Mon.</th>
+            <th data-sort="last" class="num">Último</th>
+            <th data-sort="pct_change" class="num">Var %</th>
+            <th data-sort="px_bid" class="num">Compra</th>
+            <th data-sort="px_ask" class="num">Venta</th>
+            <th data-sort="volume" class="num">Volumen</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="rows">
+          <tr><td colspan="8" class="empty">Cargando cotizaciones...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>
