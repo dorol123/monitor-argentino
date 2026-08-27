@@ -136,6 +136,16 @@ let lastDailySlotKey = null;
 // falsos positivos al reiniciar el proceso.
 let lastState = new Map();
 
+// Diagnóstico del poller, expuesto en /api/debug/poller.
+const pollerDebug = {
+  initError: null,
+  lastPollAt: null,
+  lastPollError: null,
+  lastTradesFound: 0,
+  totalTicks: 0,
+  seedSize: 0,
+};
+
 function arTimeParts(ts) {
   const d = new Date(ts);
   const hhmm = d.toLocaleTimeString('en-GB', { timeZone: 'America/Argentina/Buenos_Aires', hour: '2-digit', minute: '2-digit' });
@@ -156,11 +166,13 @@ function classifySide(lastPrice, prevBid, prevAsk) {
 }
 
 async function pollAndStore() {
+  pollerDebug.lastPollAt = new Date().toISOString();
   let data, ts;
   try {
     ({ data, ts } = await getLiveCorp());
   } catch (e) {
     console.error('Poller: no se pudo obtener data912:', e.message);
+    pollerDebug.lastPollError = `fetch: ${e.message}`;
     return;
   }
 
@@ -179,6 +191,9 @@ async function pollAndStore() {
     }
 
     if (trades.length > 0) await db.insertSnapshot(ROLLING_TABLE, trades, ts);
+    pollerDebug.lastTradesFound = trades.length;
+    pollerDebug.lastPollError = null;
+    pollerDebug.totalTicks++;
 
     pollTick++;
     if (pollTick % PRUNE_EVERY_TICKS === 0) {
@@ -186,6 +201,7 @@ async function pollAndStore() {
     }
   } catch (e) {
     console.error('Poller: error guardando operaciones:', e.message);
+    pollerDebug.lastPollError = `store: ${e.message}`;
   }
 
   const { hhmm, dateKey } = arTimeParts(ts);
@@ -205,14 +221,22 @@ if (db.enabled) {
     .then(() => db.latestStatePerSymbol(ROLLING_TABLE))
     .then((seed) => {
       lastState = seed;
+      pollerDebug.seedSize = seed.size;
       console.log(`Histórico Turso listo. Guardando solo operaciones (cambios de volumen) cada 20s (retención 48hs), ${seed.size} símbolos con estado previo, y 3x/día (largo plazo).`);
       pollAndStore();
       setInterval(pollAndStore, POLL_MS);
     })
-    .catch(e => console.error('No se pudo inicializar Turso:', e.message));
+    .catch(e => {
+      console.error('No se pudo inicializar Turso:', e.message);
+      pollerDebug.initError = e.message;
+    });
 } else {
   console.log('TURSO_DATABASE_URL / TURSO_AUTH_TOKEN no configurados: histórico deshabilitado.');
 }
+
+app.get('/api/debug/poller', (req, res) => {
+  res.json({ dbEnabled: db.enabled, lastStateSize: lastState.size, ...pollerDebug });
+});
 
 app.get('/api/history/:symbol', async (req, res) => {
   if (!db.enabled) return res.status(503).json({ error: 'Histórico no configurado en este deploy' });
