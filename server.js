@@ -1,8 +1,53 @@
 const express = require('express');
 const path = require('path');
+const crypto = require('crypto');
+const cookieParser = require('cookie-parser');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+
+const SITE_PASSWORD = process.env.SITE_PASSWORD || '000';
+const SESSION_SECRET = crypto.randomBytes(32).toString('hex');
+const COOKIE_NAME = 'monitor_auth';
+
+function sign(value) {
+  return crypto.createHmac('sha256', SESSION_SECRET).update(value).digest('hex');
+}
+
+function issueToken() {
+  return `ok.${sign('ok')}`;
+}
+
+function hasValidToken(token) {
+  if (!token) return false;
+  const [value, sig] = token.split('.');
+  return !!value && sig === sign(value);
+}
+
+app.use(cookieParser());
+app.use(express.urlencoded({ extended: false }));
+
+app.get('/login', (req, res) => {
+  res.sendFile(path.join(__dirname, 'login.html'));
+});
+
+app.post('/login', (req, res) => {
+  if (req.body.password === SITE_PASSWORD) {
+    res.cookie(COOKIE_NAME, issueToken(), {
+      httpOnly: true,
+      sameSite: 'lax',
+      maxAge: 30 * 24 * 60 * 60 * 1000,
+    });
+    return res.redirect('/');
+  }
+  res.redirect('/login?error=1');
+});
+
+app.use((req, res, next) => {
+  if (hasValidToken(req.cookies[COOKIE_NAME])) return next();
+  if (req.path.startsWith('/api/')) return res.status(401).json({ error: 'No autorizado' });
+  return res.redirect('/login');
+});
 
 const DATA912_URL = 'https://data912.com/live/arg_corp';
 const CACHE_TTL_MS = 20 * 1000; // data912 refresca este panel cada ~20s
