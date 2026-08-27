@@ -20,11 +20,18 @@ npm start
 
 Abrí http://localhost:3000
 
-## Deploy
+## Deploy (Render, gratis)
 
-Cualquier plataforma que corra Node sirve (Railway, Render, Fly.io, etc). Variables de entorno:
+1. Entrá a [render.com](https://render.com) y creá una cuenta (podés loguearte con GitHub).
+2. **New +** → **Blueprint** → seleccioná el repo `monitor-argentino`. Render detecta `render.yaml` solo y configura todo (build `npm install`, start `npm start`, plan free).
+   - Si preferís hacerlo a mano: **New +** → **Web Service** → elegí el repo → Runtime `Node` → Build Command `npm install` → Start Command `npm start` → Plan `Free`.
+3. Deploy. Te da una URL tipo `https://monitor-argentino.onrender.com`.
 
-- `PORT` (opcional, default 3000)
+**Nota sobre el plan free:** el servicio se "duerme" tras ~15 minutos sin tráfico. La primera visita después de eso tarda ~30-50s en responder mientras arranca de nuevo; después va normal. No hay forma de evitar esto en el plan gratuito.
+
+Variables de entorno:
+
+- `PORT` (la define Render automáticamente, no hace falta tocarla)
 
 ## Estructura
 
