@@ -4,7 +4,7 @@ const WATCHLIST_KEY = 'monitor-argentino:watchlist';
 const state = {
   bonds: [],
   segment: 'ARS',
-  tab: 'watchlist',
+  tab: 'all',
   search: '',
   sortKey: 'symbol',
   sortDir: 1,
