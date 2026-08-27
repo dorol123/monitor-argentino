@@ -33,7 +33,7 @@ async function init() {
 async function insertSnapshot(table, bonds, capturedAt) {
   if (!enabled || bonds.length === 0) return;
   const stmts = bonds.map(b => ({
-    sql: `INSERT INTO ${table} (${COLUMNS}) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`,
+    sql: `INSERT INTO ${table} (${COLUMNS}) VALUES (?,?,?,?,?,?,?,?,?,?,?)`,
     args: [b.symbol, b.segment, b.last, b.px_bid, b.px_ask, b.volume, b.pct_change, b.spread, b.side ?? null, b.op_volume ?? null, capturedAt],
   }));
   await client.batch(stmts, 'write');
