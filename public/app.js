@@ -128,7 +128,7 @@ function render() {
     const watched = state.watchlist.has(b.symbol);
     return `
       <tr>
-        <td class="symbol">${b.symbol}${state.segment === 'ARBITRAJES' ? ` <span class="badge">${segmentLabel[b.segment]}</span>` : ''}</td>
+        <td class="symbol"><a class="symbol-link" href="/historia.html?symbol=${b.symbol}">${b.symbol}</a>${state.segment === 'ARBITRAJES' ? ` <span class="badge">${segmentLabel[b.segment]}</span>` : ''}</td>
         <td class="num">${fmtPrice(b.last)}</td>
         <td class="num ${pctClass}">${fmtPct(b.pct_change)}</td>
         <td class="num">${fmtPrice(b.px_bid)}</td>

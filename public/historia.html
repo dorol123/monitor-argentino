@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Monitor Argentino — Cotizaciones históricas</title>
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="header">
+    <div>
+      <h1>Cotizaciones históricas</h1>
+      <p class="subtitle" id="subtitle">Elegí una ON para ver su evolución</p>
+    </div>
+    <div class="header-right">
+      <a href="/" class="nav-link">← Volver</a>
+    </div>
+  </header>
+
+  <main class="container">
+    <div class="history-controls">
+      <input id="symbol-input" type="text" placeholder="Ticker (ej: AL30D)" autocomplete="off" list="symbol-list" />
+      <datalist id="symbol-list"></datalist>
+      <div class="segment-tabs" id="range-tabs">
+        <button class="segment active" data-range="rolling48h">Últimas 48hs</button>
+        <button class="segment" data-range="monthly">Histórico mensual</button>
+      </div>
+    </div>
+
+    <div id="history-status" class="empty" style="padding: 40px 0;">Buscá un ticker arriba para ver su histórico.</div>
+
+    <div id="chart-wrap" class="table-wrap chart-wrap" style="display:none">
+      <svg id="chart" viewBox="0 0 800 300" preserveAspectRatio="none"></svg>
+    </div>
+
+    <div class="table-wrap" id="table-wrap" style="display:none">
+      <table>
+        <thead>
+          <tr>
+            <th>Fecha/hora</th>
+            <th class="num">Último</th>
+            <th class="num">Compra</th>
+            <th class="num">Venta</th>
+            <th class="num">Spread</th>
+            <th class="num">Volumen</th>
+          </tr>
+        </thead>
+        <tbody id="history-rows"></tbody>
+      </table>
+    </div>
+  </main>
+
+  <script src="historia.js"></script>
+</body>
+</html>
