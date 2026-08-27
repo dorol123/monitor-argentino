@@ -71,4 +71,38 @@ async function latestStatePerSymbol(table) {
   return map;
 }
 
-module.exports = { enabled, init, insertSnapshot, pruneOlderThan, history, latestStatePerSymbol };
+// Benchmark (Fase 1): agrega operaciones por símbolo y lado (bid/ask), usando
+// el monto operado (nominales * precio de esa operación) en vez de nominales
+// crudos, para que sea comparable en la divisa de cada ON.
+async function benchmarkAgg(sinceTs, minSpread) {
+  if (!enabled) return [];
+  const res = await client.execute({
+    sql: `
+      SELECT symbol, segment, side,
+             SUM(ABS(op_volume) * last) AS monto,
+             SUM(ABS(op_volume) * last * spread) AS monto_spread,
+             COUNT(*) AS n
+      FROM snapshots
+      WHERE spread > ? AND captured_at >= ?
+        AND side IS NOT NULL AND op_volume IS NOT NULL AND last IS NOT NULL
+      GROUP BY symbol, segment, side
+    `,
+    args: [minSpread, sinceTs],
+  });
+
+  const bySymbol = new Map();
+  for (const row of res.rows) {
+    if (!bySymbol.has(row.symbol)) {
+      bySymbol.set(row.symbol, { symbol: row.symbol, segment: row.segment, bidMonto: 0, askMonto: 0, montoSpreadSum: 0, operations: 0 });
+    }
+    const entry = bySymbol.get(row.symbol);
+    if (row.side === 'bid') entry.bidMonto = row.monto;
+    else if (row.side === 'ask') entry.askMonto = row.monto;
+    entry.montoSpreadSum += row.monto_spread;
+    entry.operations += row.n;
+  }
+
+  return [...bySymbol.values()];
+}
+
+module.exports = { enabled, init, insertSnapshot, pruneOlderThan, history, latestStatePerSymbol, benchmarkAgg };

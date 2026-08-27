@@ -267,4 +267,47 @@ app.get('/api/history/:symbol', async (req, res) => {
   }
 });
 
+// Benchmark (Fase 1): ranking de ONs por "Estimated Arbitrage Opportunity".
+// EAO = CrossableVolume × Spread promedio ponderado, donde CrossableVolume =
+// MIN(monto operado sobre bid, monto operado sobre ask) en el período, para
+// castigar a las ONs que solo tuvieron flujo real de un solo lado.
+function startOfTodayAR() {
+  const dateStr = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Argentina/Buenos_Aires' });
+  return new Date(`${dateStr}T00:00:00-03:00`).getTime();
+}
+
+app.get('/api/benchmark', async (req, res) => {
+  if (!db.enabled) return res.status(503).json({ error: 'Histórico no configurado en este deploy' });
+
+  const period = req.query.period === 'today' ? 'today' : '48h';
+  const minSpread = 1; // umbral fijo en Fase 1
+  const sinceTs = period === 'today' ? startOfTodayAR() : Date.now() - ROLLING_RETENTION_MS;
+
+  try {
+    const agg = await db.benchmarkAgg(sinceTs, minSpread);
+    const data = agg.map(e => {
+      const totalMonto = e.bidMonto + e.askMonto;
+      const crossableVolume = Math.min(e.bidMonto, e.askMonto);
+      const avgSpreadWeighted = totalMonto > 0 ? e.montoSpreadSum / totalMonto : 0;
+      const eao = crossableVolume * (avgSpreadWeighted / 100);
+      return {
+        symbol: e.symbol,
+        segment: e.segment,
+        currency: e.segment === 'ARS' ? 'ARS' : 'USD',
+        bidMonto: e.bidMonto,
+        askMonto: e.askMonto,
+        totalMonto,
+        crossableVolume,
+        avgSpreadWeighted,
+        operations: e.operations,
+        eao,
+      };
+    }).sort((a, b) => b.eao - a.eao);
+
+    res.json({ period, minSpread, sinceTs, sinceIso: new Date(sinceTs).toISOString(), data });
+  } catch (e) {
+    res.status(502).json({ error: 'Error calculando benchmark', message: e.message });
+  }
+});
+
 app.listen(PORT, () => console.log(`Monitor Argentino corriendo en http://localhost:${PORT}`));

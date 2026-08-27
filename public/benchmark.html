@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Monitor Argentino — Benchmark de Arbitraje</title>
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="header">
+    <div>
+      <h1>Benchmark de Arbitraje</h1>
+      <p class="subtitle">Fase 1 · Estimated Arbitrage Opportunity</p>
+    </div>
+    <div class="header-right">
+      <a href="/" class="nav-link">← Volver</a>
+    </div>
+  </header>
+
+  <main class="container">
+    <div class="disclaimer">
+      <p>
+        <strong>Estimated Arbitrage Opportunity (EAO)</strong> — no es P&amp;L real ni volumen garantizado ejecutable.
+        Se calcula como <code>Crossable Volume × Spread promedio ponderado</code>, donde Crossable Volume es el
+        <strong>mínimo</strong> entre el monto operado sobre la punta compradora y el operado sobre la vendedora
+        en el período — castiga a las ONs que solo tuvieron flujo real de un solo lado, aunque el spread haya sido enorme.
+      </p>
+      <p>
+        Solo se cuentan operaciones con spread &gt; 1%. Los datos de operaciones (lado bid/ask) recién empezaron a
+        registrarse hoy ~15:00hs — cuanto más tiempo pase, más representativo va a ser este ranking.
+      </p>
+    </div>
+
+    <div class="segment-tabs" id="period-tabs">
+      <button class="segment active" data-period="today">Hoy</button>
+      <button class="segment" data-period="48h">Últimas 48hs</button>
+    </div>
+
+    <div id="benchmark-status" class="empty" style="padding: 30px 0;">Cargando...</div>
+
+    <div class="table-wrap" id="benchmark-table-wrap" style="display:none">
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Ticker</th>
+            <th class="num">Vol. Bid</th>
+            <th class="num">Vol. Ask</th>
+            <th class="num">Crossable Vol.</th>
+            <th class="num">Spread prom.</th>
+            <th class="num">Operaciones</th>
+            <th class="num">EAO</th>
+          </tr>
+        </thead>
+        <tbody id="benchmark-rows"></tbody>
+      </table>
+    </div>
+  </main>
+
+  <script src="benchmark.js"></script>
+</body>
+</html>
