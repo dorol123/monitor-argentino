@@ -38,7 +38,7 @@ function toggleWatch(symbol) {
 }
 
 function fmtPrice(n) {
-  return n == null ? '—' : Number(n).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  return n == null ? '—' : Number(n).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 4 });
 }
 
 function fmtPct(n) {

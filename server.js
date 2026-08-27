@@ -71,18 +71,25 @@ async function getLiveCorp() {
       if (b.symbol.endsWith('D')) { segment = 'MEP'; currency = 'USD'; }
       else if (b.symbol.endsWith('C')) { segment = 'CABLE'; currency = 'USD'; }
 
-      // Spread entre puntas, como % sobre la punta compradora
-      const spread = (b.px_bid > 0 && b.px_ask != null)
-        ? ((b.px_ask - b.px_bid) / b.px_bid) * 100
+      // data912 cotiza los precios cada 100 nominales; se divide para
+      // obtener el precio por 1 nominal individual.
+      const last = b.c != null ? b.c / 100 : null;
+      const px_bid = b.px_bid != null ? b.px_bid / 100 : null;
+      const px_ask = b.px_ask != null ? b.px_ask / 100 : null;
+
+      // Spread entre puntas, como % sobre la punta compradora (la división
+      // por 100 no altera el ratio)
+      const spread = (px_bid > 0 && px_ask != null)
+        ? ((px_ask - px_bid) / px_bid) * 100
         : null;
 
       return {
         symbol: b.symbol,
         segment,
         currency,
-        last: b.c,
-        px_bid: b.px_bid,
-        px_ask: b.px_ask,
+        last,
+        px_bid,
+        px_ask,
         q_bid: b.q_bid,
         q_ask: b.q_ask,
         volume: b.v,
