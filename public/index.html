@@ -19,10 +19,16 @@
   </header>
 
   <main class="container">
+    <div class="segment-tabs">
+      <button class="segment active" data-segment="ARS">Pesos</button>
+      <button class="segment" data-segment="MEP">Dólar MEP</button>
+      <button class="segment" data-segment="CABLE">Dólar Cable</button>
+    </div>
+
     <div class="toolbar">
       <div class="tabs">
         <button class="tab active" data-tab="watchlist">★ Mi seguimiento</button>
-        <button class="tab" data-tab="all">Todas las ONs</button>
+        <button class="tab" data-tab="all">Todas</button>
       </div>
       <input id="search" type="text" placeholder="Buscar ticker..." autocomplete="off" />
     </div>
@@ -32,7 +38,6 @@
         <thead>
           <tr>
             <th data-sort="symbol">Ticker</th>
-            <th data-sort="currency">Mon.</th>
             <th data-sort="last" class="num">Último</th>
             <th data-sort="pct_change" class="num">Var %</th>
             <th data-sort="px_bid" class="num">Compra</th>
@@ -42,7 +47,7 @@
           </tr>
         </thead>
         <tbody id="rows">
-          <tr><td colspan="8" class="empty">Cargando cotizaciones...</td></tr>
+          <tr><td colspan="7" class="empty">Cargando cotizaciones...</td></tr>
         </tbody>
       </table>
     </div>

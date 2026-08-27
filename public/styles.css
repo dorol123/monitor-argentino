@@ -66,6 +66,30 @@ body {
   padding: 0 24px 60px;
 }
 
+.segment-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.segment {
+  flex: 1;
+  border: 1px solid var(--border);
+  background: var(--panel);
+  color: var(--text-dim);
+  padding: 10px 14px;
+  border-radius: 12px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.segment.active {
+  background: var(--accent-dim);
+  color: #04201a;
+  border-color: var(--accent-dim);
+}
+
 .toolbar {
   display: flex;
   flex-wrap: wrap;

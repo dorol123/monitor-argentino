@@ -3,6 +3,7 @@ const WATCHLIST_KEY = 'monitor-argentino:watchlist';
 
 const state = {
   bonds: [],
+  segment: 'ARS',
   tab: 'watchlist',
   search: '',
   sortKey: 'symbol',
@@ -16,6 +17,7 @@ const els = {
   statusText: document.getElementById('status-text'),
   search: document.getElementById('search'),
   tabs: document.querySelectorAll('.tab'),
+  segments: document.querySelectorAll('.segment'),
   headers: document.querySelectorAll('th[data-sort]'),
 };
 
@@ -68,9 +70,9 @@ function setStatus(kind, text) {
 }
 
 function getRows() {
-  let rows = state.tab === 'watchlist'
-    ? state.bonds.filter(b => state.watchlist.has(b.symbol))
-    : state.bonds;
+  let rows = state.bonds.filter(b => b.segment === state.segment);
+
+  if (state.tab === 'watchlist') rows = rows.filter(b => state.watchlist.has(b.symbol));
 
   if (state.search.trim()) {
     const q = state.search.trim().toLowerCase();
@@ -95,9 +97,9 @@ function render() {
     const msg = state.bonds.length === 0
       ? 'Cargando cotizaciones...'
       : state.tab === 'watchlist'
-        ? 'Sin ONs en seguimiento. Andá a "Todas las ONs" y tocá la ⭐ para agregar.'
+        ? 'Sin ONs en seguimiento en este segmento. Andá a "Todas" y tocá la ⭐ para agregar.'
         : 'Sin resultados para tu búsqueda.';
-    els.rows.innerHTML = `<tr><td colspan="8" class="empty">${msg}</td></tr>`;
+    els.rows.innerHTML = `<tr><td colspan="7" class="empty">${msg}</td></tr>`;
     return;
   }
 
@@ -107,7 +109,6 @@ function render() {
     return `
       <tr>
         <td class="symbol">${b.symbol}</td>
-        <td><span class="badge">${b.currency}</span></td>
         <td class="num">${fmtPrice(b.last)}</td>
         <td class="num ${pctClass}">${fmtPct(b.pct_change)}</td>
         <td class="num">${fmtPrice(b.px_bid)}</td>
@@ -122,6 +123,15 @@ function render() {
     btn.addEventListener('click', () => toggleWatch(btn.dataset.symbol));
   });
 }
+
+els.segments.forEach(seg => {
+  seg.addEventListener('click', () => {
+    els.segments.forEach(s => s.classList.remove('active'));
+    seg.classList.add('active');
+    state.segment = seg.dataset.segment;
+    render();
+  });
+});
 
 els.tabs.forEach(tab => {
   tab.addEventListener('click', () => {

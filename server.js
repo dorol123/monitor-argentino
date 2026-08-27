@@ -19,17 +19,26 @@ async function getLiveCorp() {
 
   const data = raw
     .filter(b => b && b.symbol)
-    .map(b => ({
-      symbol: b.symbol,
-      currency: b.symbol.endsWith('D') ? 'USD' : 'ARS',
-      last: b.c,
-      px_bid: b.px_bid,
-      px_ask: b.px_ask,
-      q_bid: b.q_bid,
-      q_ask: b.q_ask,
-      volume: b.v,
-      pct_change: b.pct_change,
-    }))
+    .map(b => {
+      // Convención de BYMA: sin sufijo = Pesos, "D" = Dólar MEP (liquida en el país),
+      // "C" = Dólar Cable/CCL (liquida en el exterior).
+      let segment = 'ARS', currency = 'ARS';
+      if (b.symbol.endsWith('D')) { segment = 'MEP'; currency = 'USD'; }
+      else if (b.symbol.endsWith('C')) { segment = 'CABLE'; currency = 'USD'; }
+
+      return {
+        symbol: b.symbol,
+        segment,
+        currency,
+        last: b.c,
+        px_bid: b.px_bid,
+        px_ask: b.px_ask,
+        q_bid: b.q_bid,
+        q_ask: b.q_ask,
+        volume: b.v,
+        pct_change: b.pct_change,
+      };
+    })
     .sort((a, b) => a.symbol.localeCompare(b.symbol));
 
   cache = { data, ts: now };
