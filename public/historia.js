@@ -29,6 +29,14 @@ function fmtInt(n) {
   return n == null ? '—' : Number(n).toLocaleString('es-AR');
 }
 
+// Monto operado = nominales de la operación * precio por nominal.
+function fmtMonto(nominales, price, segment) {
+  if (nominales == null || price == null) return '—';
+  const monto = Math.abs(nominales) * price;
+  const symbol = segment === 'ARS' ? '$' : 'U$S';
+  return `${symbol} ${Number(monto).toLocaleString('es-AR', { maximumFractionDigits: 0 })}`;
+}
+
 function fmtDateTime(ts) {
   return new Date(ts).toLocaleString('es-AR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
 }
@@ -80,8 +88,9 @@ function renderTable(rows) {
   const reversed = [...rows].reverse().slice(0, 500);
   els.tableRows.innerHTML = reversed.map(r => {
     const sideClass = r.side === 'bid' ? 'row-bid' : r.side === 'ask' ? 'row-ask' : '';
-    // op_volume: cuánto se operó en ESA operación puntual (no el acumulado del día).
-    const opVol = r.op_volume != null ? fmtInt(Math.abs(r.op_volume)) : fmtInt(r.volume);
+    // Monto operado en la divisa del segmento (nominales de esa operación * precio).
+    const nominales = r.op_volume != null ? r.op_volume : r.volume;
+    const montoOperado = fmtMonto(nominales, r.last, r.segment);
     return `
     <tr class="${sideClass}">
       <td>${fmtDateTime(r.captured_at)}</td>
@@ -89,7 +98,7 @@ function renderTable(rows) {
       <td class="num">${fmtPrice(r.px_bid)}</td>
       <td class="num">${fmtPrice(r.px_ask)}</td>
       <td class="num">${fmtSpread(r.spread)}</td>
-      <td class="num">${opVol}</td>
+      <td class="num">${montoOperado}</td>
     </tr>
   `;
   }).join('');
