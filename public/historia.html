@@ -33,6 +33,11 @@
       <svg id="chart" viewBox="0 0 800 300" preserveAspectRatio="none"></svg>
     </div>
 
+    <div class="legend" id="table-legend" style="display:none">
+      <span><span class="legend-dot dot-bid"></span> Operación sobre la punta compradora (bid)</span>
+      <span><span class="legend-dot dot-ask"></span> Operación sobre la punta vendedora (ask)</span>
+    </div>
+
     <div class="table-wrap" id="table-wrap" style="display:none">
       <table>
         <thead>
@@ -42,7 +47,7 @@
             <th class="num">Compra</th>
             <th class="num">Venta</th>
             <th class="num">Spread</th>
-            <th class="num">Volumen</th>
+            <th class="num">Vol. operado (VN)</th>
           </tr>
         </thead>
         <tbody id="history-rows"></tbody>

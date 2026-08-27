@@ -5,6 +5,7 @@ const els = {
   status: document.getElementById('history-status'),
   chartWrap: document.getElementById('chart-wrap'),
   chart: document.getElementById('chart'),
+  legend: document.getElementById('table-legend'),
   tableWrap: document.getElementById('table-wrap'),
   tableRows: document.getElementById('history-rows'),
   subtitle: document.getElementById('subtitle'),
@@ -77,16 +78,21 @@ function drawChart(rows) {
 
 function renderTable(rows) {
   const reversed = [...rows].reverse().slice(0, 500);
-  els.tableRows.innerHTML = reversed.map(r => `
-    <tr>
+  els.tableRows.innerHTML = reversed.map(r => {
+    const sideClass = r.side === 'bid' ? 'row-bid' : r.side === 'ask' ? 'row-ask' : '';
+    // op_volume: cuánto se operó en ESA operación puntual (no el acumulado del día).
+    const opVol = r.op_volume != null ? fmtInt(Math.abs(r.op_volume)) : fmtInt(r.volume);
+    return `
+    <tr class="${sideClass}">
       <td>${fmtDateTime(r.captured_at)}</td>
       <td class="num">${fmtPrice(r.last)}</td>
       <td class="num">${fmtPrice(r.px_bid)}</td>
       <td class="num">${fmtPrice(r.px_ask)}</td>
       <td class="num">${fmtSpread(r.spread)}</td>
-      <td class="num">${fmtInt(r.volume)}</td>
+      <td class="num">${opVol}</td>
     </tr>
-  `).join('');
+  `;
+  }).join('');
 }
 
 async function loadHistory() {
@@ -97,6 +103,7 @@ async function loadHistory() {
   els.status.textContent = `Cargando histórico de ${symbol}...`;
   els.chartWrap.style.display = 'none';
   els.tableWrap.style.display = 'none';
+  els.legend.style.display = 'none';
   els.subtitle.textContent = symbol;
 
   try {
@@ -112,6 +119,7 @@ async function loadHistory() {
     els.status.style.display = 'none';
     els.chartWrap.style.display = 'block';
     els.tableWrap.style.display = 'block';
+    els.legend.style.display = state.range === 'rolling48h' ? 'flex' : 'none';
     drawChart(json.rows);
     renderTable(json.rows);
   } catch (e) {

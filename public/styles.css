@@ -196,6 +196,12 @@ tbody td {
 tbody tr:last-child td { border-bottom: none; }
 tbody tr:hover { background: rgba(255,255,255,0.02); }
 
+/* Operación cerrada sobre la punta compradora (bid) vs. vendedora (ask) */
+tr.row-bid { background: linear-gradient(90deg, rgba(52,211,153,0.16), transparent 65%); }
+tr.row-ask { background: linear-gradient(90deg, rgba(248,113,113,0.16), transparent 65%); }
+tr.row-bid:hover { background: linear-gradient(90deg, rgba(52,211,153,0.24), transparent 65%); }
+tr.row-ask:hover { background: linear-gradient(90deg, rgba(248,113,113,0.24), transparent 65%); }
+
 .symbol { font-weight: 700; }
 
 .symbol-link { color: var(--text); text-decoration: none; }
@@ -226,6 +232,27 @@ tbody tr:hover { background: rgba(255,255,255,0.02); }
 #range-tabs { margin-bottom: 0; flex: 1; min-width: 260px; }
 
 .chart-wrap { padding: 16px; margin-bottom: 16px; }
+
+.legend {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+  font-size: 0.78rem;
+  color: var(--text-dim);
+  margin-bottom: 10px;
+}
+
+.legend-dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+  margin-right: 6px;
+  vertical-align: middle;
+}
+
+.dot-bid { background: var(--accent); }
+.dot-ask { background: var(--red); }
 
 #chart { width: 100%; height: 260px; display: block; }
 

@@ -131,12 +131,28 @@ const DAILY_SLOTS_AR = ['11:00', '14:00', '17:00']; // hora Argentina
 
 let pollTick = 0;
 let lastDailySlotKey = null;
+// symbol -> { volume, px_bid, px_ask } de la última vez que lo vimos, para
+// detectar solo operaciones reales (cambios de volumen) y no repetir
+// falsos positivos al reiniciar el proceso.
+let lastState = new Map();
 
 function arTimeParts(ts) {
   const d = new Date(ts);
   const hhmm = d.toLocaleTimeString('en-GB', { timeZone: 'America/Argentina/Buenos_Aires', hour: '2-digit', minute: '2-digit' });
   const dateKey = d.toLocaleDateString('en-CA', { timeZone: 'America/Argentina/Buenos_Aires' });
   return { hhmm, dateKey };
+}
+
+// Clasifica la operación contra las puntas que había ANTES del cambio de
+// volumen (no las puntas ya movidas por la propia operación).
+function classifySide(lastPrice, prevBid, prevAsk) {
+  if (lastPrice == null) return null;
+  if (prevBid == null && prevAsk == null) return null;
+  if (prevAsk == null) return 'bid';
+  if (prevBid == null) return 'ask';
+  const distBid = Math.abs(lastPrice - prevBid);
+  const distAsk = Math.abs(lastPrice - prevAsk);
+  return distBid <= distAsk ? 'bid' : 'ask';
 }
 
 async function pollAndStore() {
@@ -149,13 +165,27 @@ async function pollAndStore() {
   }
 
   try {
-    await db.insertSnapshot(ROLLING_TABLE, data, ts);
+    const trades = [];
+    for (const b of data) {
+      const prev = lastState.get(b.symbol);
+      if (prev && b.volume != null && prev.volume != null && b.volume !== prev.volume) {
+        trades.push({
+          ...b,
+          op_volume: b.volume - prev.volume,
+          side: classifySide(b.last, prev.px_bid, prev.px_ask),
+        });
+      }
+      lastState.set(b.symbol, { volume: b.volume, px_bid: b.px_bid, px_ask: b.px_ask });
+    }
+
+    if (trades.length > 0) await db.insertSnapshot(ROLLING_TABLE, trades, ts);
+
     pollTick++;
     if (pollTick % PRUNE_EVERY_TICKS === 0) {
       await db.pruneOlderThan(ROLLING_TABLE, Date.now() - ROLLING_RETENTION_MS);
     }
   } catch (e) {
-    console.error('Poller: error guardando snapshot rolling:', e.message);
+    console.error('Poller: error guardando operaciones:', e.message);
   }
 
   const { hhmm, dateKey } = arTimeParts(ts);
@@ -172,8 +202,10 @@ async function pollAndStore() {
 
 if (db.enabled) {
   db.init()
-    .then(() => {
-      console.log('Histórico Turso listo. Guardando snapshot cada 20s (retención 48hs) y 3x/día (largo plazo).');
+    .then(() => db.latestStatePerSymbol(ROLLING_TABLE))
+    .then((seed) => {
+      lastState = seed;
+      console.log(`Histórico Turso listo. Guardando solo operaciones (cambios de volumen) cada 20s (retención 48hs), ${seed.size} símbolos con estado previo, y 3x/día (largo plazo).`);
       pollAndStore();
       setInterval(pollAndStore, POLL_MS);
     })
