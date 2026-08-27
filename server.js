@@ -144,13 +144,22 @@ const pollerDebug = {
   lastTradesFound: 0,
   totalTicks: 0,
   seedSize: 0,
+  marketOpen: null,
 };
+
+const MARKET_OPEN_AR = '10:00';
+const MARKET_CLOSE_AR = '17:30';
 
 function arTimeParts(ts) {
   const d = new Date(ts);
   const hhmm = d.toLocaleTimeString('en-GB', { timeZone: 'America/Argentina/Buenos_Aires', hour: '2-digit', minute: '2-digit' });
   const dateKey = d.toLocaleDateString('en-CA', { timeZone: 'America/Argentina/Buenos_Aires' });
   return { hhmm, dateKey };
+}
+
+// Comparación lexicográfica de "HH:MM" funciona igual que numérica.
+function isMarketHoursAR(hhmm) {
+  return hhmm >= MARKET_OPEN_AR && hhmm < MARKET_CLOSE_AR;
 }
 
 // Clasifica la operación contra las puntas que había ANTES del cambio de
@@ -176,11 +185,20 @@ async function pollAndStore() {
     return;
   }
 
+  const { hhmm } = arTimeParts(ts);
+  const marketOpen = isMarketHoursAR(hhmm);
+  pollerDebug.marketOpen = marketOpen;
+
   try {
     const trades = [];
     for (const b of data) {
       const prev = lastState.get(b.symbol);
-      if (prev && b.volume != null && prev.volume != null && b.volume !== prev.volume) {
+      // Fuera de rueda (10:00-17:30 AR) no se escribe a la base, para no
+      // guardar ruido cuando el mercado está cerrado y no hay operaciones
+      // reales. El estado en memoria se sigue actualizando igual, así al
+      // reabrir el mercado se compara contra el último precio real, no
+      // contra algo desactualizado.
+      if (marketOpen && prev && b.volume != null && prev.volume != null && b.volume !== prev.volume) {
         trades.push({
           ...b,
           op_volume: b.volume - prev.volume,
@@ -188,6 +206,12 @@ async function pollAndStore() {
         });
       }
       lastState.set(b.symbol, { volume: b.volume, px_bid: b.px_bid, px_ask: b.px_ask });
+    }
+
+    if (!marketOpen) {
+      pollerDebug.lastTradesFound = 0;
+      pollerDebug.lastPollError = null;
+      return;
     }
 
     if (trades.length > 0) await db.insertSnapshot(ROLLING_TABLE, trades, ts);
@@ -204,7 +228,7 @@ async function pollAndStore() {
     pollerDebug.lastPollError = `store: ${e.message}`;
   }
 
-  const { hhmm, dateKey } = arTimeParts(ts);
+  const { dateKey } = arTimeParts(ts);
   const slotKey = `${dateKey} ${hhmm}`;
   if (DAILY_SLOTS_AR.includes(hhmm) && slotKey !== lastDailySlotKey) {
     lastDailySlotKey = slotKey;

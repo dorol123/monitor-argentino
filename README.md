@@ -16,13 +16,24 @@ Monitor en tiempo (casi) real de **Obligaciones Negociables (ONs)** argentinas: 
 
 Si configurás `TURSO_DATABASE_URL` y `TURSO_AUTH_TOKEN`, el servidor arranca un poller interno que:
 
-- Guarda una foto de todas las ONs **cada 20 segundos** en la tabla `snapshots`, con **retención de 48 horas** (se poda automáticamente lo más viejo).
+- Cada ~20 segundos compara el volumen de cada ON contra el último visto. Si cambió (= hubo una operación real), guarda esa operación en `snapshots` con el lado (`bid`/`ask`, comparado contra las puntas previas a la operación) y el tamaño operado — **retención de 48 horas** (se poda automáticamente lo más viejo).
+- **Solo escribe a la base en horario de rueda, 10:00 a 17:30 hora Argentina.** Fuera de ese rango el poller sigue el precio en memoria (para no comparar contra datos viejos al reabrir) pero no persiste nada — no tiene sentido guardar "operaciones" cuando el mercado está cerrado, y de paso se ahorra espacio.
 - Guarda una foto **3 veces por día** (11:00, 14:00 y 17:00, hora Argentina) en `snapshots_daily`, sin límite de retención — pensada para ver evolución de mediano/largo plazo.
 - Expone `GET /api/history/:symbol` (requiere estar logueado) — `?range=monthly` para la serie de largo plazo, sin parámetro para las últimas 48hs.
+- Expone `GET /api/benchmark?period=today|48h` — ranking de ONs por "Estimated Arbitrage Opportunity" (ver sección Benchmark abajo).
 
 Sin esas dos variables de entorno, el histórico queda deshabilitado pero el resto de la app (cotizaciones en vivo) funciona igual.
 
-**Ojo con Render free:** el poller solo corre mientras el proceso está vivo. Si el servicio se duerme por inactividad (ver nota más abajo), no se guardan snapshots durante ese lapso. Para minimizar cortes, configurá un ping externo gratuito (por ejemplo [cron-job.org](https://cron-job.org) o UptimeRobot) que pegue cada 10 minutos a `https://tu-app.onrender.com/healthz` (no requiere login) para mantenerlo despierto.
+**Ojo con Render free:** el poller solo corre mientras el proceso está vivo. Si el servicio se duerme por inactividad, no se guardan operaciones durante ese lapso. Para evitarlo, `.github/workflows/keepalive.yml` corre en GitHub Actions cada 10 minutos y pega a `/healthz` (sin login) — no requiere ninguna cuenta externa, ya viene configurado en el repo.
+
+## Benchmark (Fase 1)
+
+En `/benchmark.html`: ranking de ONs por **Estimated Arbitrage Opportunity (EAO)** — una estimación de cuánto valor había disponible aprovechando la diferencia entre puntas, ponderando tanto el spread como que haya habido flujo real de operaciones en AMBOS lados (bid y ask), no solo un spread grande sin nadie operando del otro lado.
+
+- `CrossableVolume = MIN(monto operado sobre bid, monto operado sobre ask)` en el período — el lado con menos flujo limita cuánto se podría haber aprovechado.
+- `EAO = CrossableVolume × spread promedio ponderado por monto`.
+- Umbral fijo en esta fase: solo cuentan operaciones con spread > 1%. Períodos: Hoy / Últimas 48hs.
+- Es una estimación, no P&L real ni volumen garantizado ejecutable — el disclaimer está visible en la página.
 
 ## Uso local
 
@@ -51,11 +62,12 @@ Variables de entorno:
 ## Estructura
 
 ```
-server.js        # Express: proxy/cache de data912, gate de acceso, poller de histórico, estáticos
-db.js            # cliente Turso: init de tablas, insert, prune, consulta de histórico
+server.js        # Express: proxy/cache de data912, gate de acceso, poller de histórico, benchmark, estáticos
+db.js            # cliente Turso: init de tablas, insert, prune, consulta de histórico y benchmark
 login.html       # página de acceso con clave
+.github/workflows/keepalive.yml   # ping cada 10 min a /healthz para que Render no se duerma
 public/
-  index.html
-  styles.css
-  app.js          # fetch, tabla, sorting, búsqueda, watchlist en localStorage
+  index.html, styles.css, app.js    # tabla principal en vivo
+  historia.html, historia.js        # cotizaciones históricas por ticker (48hs / mensual)
+  benchmark.html, benchmark.js      # ranking de arbitraje (Fase 1)
 ```
