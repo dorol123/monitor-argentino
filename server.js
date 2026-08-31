@@ -119,20 +119,37 @@ async function getLiveCorp() {
 
 app.use(express.static(path.join(__dirname, 'public')));
 
-app.get('/api/ons', async (req, res) => {
-  try {
-    const { data, ts } = await getLiveCorp();
-    res.json({ data, updatedAt: new Date(ts).toISOString() });
-  } catch (e) {
-    res.status(502).json({ error: 'No se pudo obtener la cotización de data912', message: e.message });
-  }
-});
-
 // Histórico: "rolling" guarda una foto cada 20s y retiene 48hs;
 // "daily" guarda 3 fotos por día y se conserva indefinidamente.
 const ROLLING_TABLE = 'snapshots';
 const DAILY_TABLE = 'snapshots_daily';
 const ROLLING_RETENTION_MS = 48 * 60 * 60 * 1000;
+
+// Último precio operado por lado (últimas 48hs), cacheado igual que la data
+// en vivo para no golpear Turso en cada refresco de cada pestaña abierta.
+let lastOperatedCache = { data: null, ts: 0 };
+async function getLastOperatedPrices() {
+  if (!db.enabled) return new Map();
+  const now = Date.now();
+  if (lastOperatedCache.data && now - lastOperatedCache.ts < CACHE_TTL_MS) return lastOperatedCache.data;
+  const map = await db.lastOperatedPrices(now - ROLLING_RETENTION_MS);
+  lastOperatedCache = { data: map, ts: now };
+  return map;
+}
+
+app.get('/api/ons', async (req, res) => {
+  try {
+    const { data, ts } = await getLiveCorp();
+    const lastOperated = await getLastOperatedPrices();
+    const enriched = data.map(b => {
+      const ops = lastOperated.get(b.symbol) || {};
+      return { ...b, lastBidOperated: ops.bid ?? null, lastAskOperated: ops.ask ?? null };
+    });
+    res.json({ data: enriched, updatedAt: new Date(ts).toISOString() });
+  } catch (e) {
+    res.status(502).json({ error: 'No se pudo obtener la cotización de data912', message: e.message });
+  }
+});
 const DAILY_QUERY_WINDOW_MS = 400 * 24 * 60 * 60 * 1000; // ~13 meses hacia atrás
 const POLL_MS = 20 * 1000;
 const PRUNE_EVERY_TICKS = 30; // podar cada ~10 min

@@ -13,6 +13,7 @@ const state = {
 };
 
 const els = {
+  table: document.getElementById('ons-table'),
   rows: document.getElementById('rows'),
   statusDot: document.getElementById('status-dot'),
   statusText: document.getElementById('status-text'),
@@ -145,7 +146,7 @@ function render() {
           : state.hideUnoperated
             ? 'Nada operado en este segmento todavía. Destildá "Ocultar no operados" para ver todo.'
             : 'Sin resultados para tu búsqueda.';
-    els.rows.innerHTML = `<tr><td colspan="8" class="empty">${msg}</td></tr>`;
+    els.rows.innerHTML = `<tr><td colspan="10" class="empty">${msg}</td></tr>`;
     return;
   }
 
@@ -161,6 +162,8 @@ function render() {
         <td class="num ${pctClass}">${fmtPct(b.pct_change)}</td>
         <td class="num">${fmtPrice(b.px_bid)}</td>
         <td class="num">${fmtPrice(b.px_ask)}</td>
+        <td class="num arb-col">${fmtPrice(b.lastBidOperated)}</td>
+        <td class="num arb-col">${fmtPrice(b.lastAskOperated)}</td>
         <td class="num">${fmtSpread(b.spread)}</td>
         <td class="num">${fmtMonto(b.volume, b.last, b.currency)}</td>
         <td><button class="star-btn ${watched ? 'active' : ''}" data-symbol="${b.symbol}" title="Agregar/quitar de seguimiento">${watched ? '★' : '☆'}</button></td>
@@ -178,6 +181,7 @@ els.segments.forEach(seg => {
     els.segments.forEach(s => s.classList.remove('active'));
     seg.classList.add('active');
     state.segment = seg.dataset.segment;
+    els.table.classList.toggle('arb-mode', state.segment === 'ARBITRAJES');
     render();
   });
 });
