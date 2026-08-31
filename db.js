@@ -105,4 +105,27 @@ async function benchmarkAgg(sinceTs, minSpread) {
   return [...bySymbol.values()];
 }
 
-module.exports = { enabled, init, insertSnapshot, pruneOlderThan, history, latestStatePerSymbol, benchmarkAgg };
+// Último precio operado por símbolo y lado (bid/ask) dentro del período, para
+// mostrar en el Benchmark junto al bid/ask actual (que sale de la data en vivo).
+async function lastOperatedPrices(sinceTs) {
+  if (!enabled) return new Map();
+  const res = await client.execute({
+    sql: `
+      SELECT symbol, side, last FROM (
+        SELECT symbol, side, last,
+               ROW_NUMBER() OVER (PARTITION BY symbol, side ORDER BY captured_at DESC) AS rn
+        FROM snapshots
+        WHERE captured_at >= ? AND side IS NOT NULL AND last IS NOT NULL
+      ) WHERE rn = 1
+    `,
+    args: [sinceTs],
+  });
+  const map = new Map();
+  for (const row of res.rows) {
+    if (!map.has(row.symbol)) map.set(row.symbol, {});
+    map.get(row.symbol)[row.side] = row.last;
+  }
+  return map;
+}
+
+module.exports = { enabled, init, insertSnapshot, pruneOlderThan, history, latestStatePerSymbol, benchmarkAgg, lastOperatedPrices };

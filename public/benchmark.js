@@ -17,6 +17,12 @@ function fmtPct(n) {
   return n == null ? '—' : `${Number(n).toFixed(2)}%`;
 }
 
+function fmtPriceCurrency(n, currency) {
+  if (n == null) return '—';
+  const symbol = currency === 'ARS' ? '$' : 'U$S';
+  return `${symbol} ${Number(n).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 4 })}`;
+}
+
 async function loadBenchmark() {
   els.status.style.display = 'block';
   els.status.textContent = 'Cargando...';
@@ -41,6 +47,10 @@ async function loadBenchmark() {
       <tr>
         <td>${i + 1}</td>
         <td class="symbol"><a class="symbol-link" href="/historia.html?symbol=${d.symbol}">${d.symbol}</a></td>
+        <td class="num">${fmtPriceCurrency(d.currentBid, d.currency)}</td>
+        <td class="num">${fmtPriceCurrency(d.currentAsk, d.currency)}</td>
+        <td class="num">${fmtPriceCurrency(d.lastBidOperated, d.currency)}</td>
+        <td class="num">${fmtPriceCurrency(d.lastAskOperated, d.currency)}</td>
         <td class="num">${fmtMontoCurrency(d.bidMonto, d.currency)}</td>
         <td class="num">${fmtMontoCurrency(d.askMonto, d.currency)}</td>
         <td class="num">${fmtMontoCurrency(d.crossableVolume, d.currency)}</td>

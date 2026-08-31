@@ -317,16 +317,28 @@ app.get('/api/benchmark', async (req, res) => {
   const sinceTs = period === 'today' ? startOfTodayAR() : Date.now() - ROLLING_RETENTION_MS;
 
   try {
-    const agg = await db.benchmarkAgg(sinceTs, minSpread);
+    const [agg, lastOperated, live] = await Promise.all([
+      db.benchmarkAgg(sinceTs, minSpread),
+      db.lastOperatedPrices(sinceTs),
+      getLiveCorp(),
+    ]);
+    const liveBySymbol = new Map(live.data.map(b => [b.symbol, b]));
+
     const data = agg.map(e => {
       const totalMonto = e.bidMonto + e.askMonto;
       const crossableVolume = Math.min(e.bidMonto, e.askMonto);
       const avgSpreadWeighted = totalMonto > 0 ? e.montoSpreadSum / totalMonto : 0;
       const eao = crossableVolume * (avgSpreadWeighted / 100);
+      const liveBond = liveBySymbol.get(e.symbol);
+      const lastOps = lastOperated.get(e.symbol) || {};
       return {
         symbol: e.symbol,
         segment: e.segment,
         currency: e.segment === 'ARS' ? 'ARS' : 'USD',
+        currentBid: liveBond?.px_bid ?? null,
+        currentAsk: liveBond?.px_ask ?? null,
+        lastBidOperated: lastOps.bid ?? null,
+        lastAskOperated: lastOps.ask ?? null,
         bidMonto: e.bidMonto,
         askMonto: e.askMonto,
         totalMonto,
