@@ -343,4 +343,20 @@ app.get('/api/benchmark', async (req, res) => {
   }
 });
 
+// Self-ping: además del GitHub Action (que Github puede demorar horas en
+// disparar si el cron es muy frecuente), el propio proceso se pega a su URL
+// pública cada 10 min. Al ser tráfico entrante real por la URL de Render,
+// esto sí resetea de forma confiable el contador de inactividad del free tier.
+const SELF_PING_MS = 10 * 60 * 1000;
+const SELF_PING_URL = process.env.RENDER_EXTERNAL_URL || process.env.PUBLIC_URL;
+
+if (SELF_PING_URL) {
+  setInterval(() => {
+    fetch(`${SELF_PING_URL}/healthz`).catch((e) => console.error('Self-ping falló:', e.message));
+  }, SELF_PING_MS);
+  console.log(`Self-ping activado cada ${SELF_PING_MS / 60000} min hacia ${SELF_PING_URL}/healthz.`);
+} else {
+  console.log('RENDER_EXTERNAL_URL/PUBLIC_URL no configurado: self-ping deshabilitado (normal en local).');
+}
+
 app.listen(PORT, () => console.log(`Monitor Argentino corriendo en http://localhost:${PORT}`));
