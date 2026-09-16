@@ -58,6 +58,11 @@ function drawChart(rows) {
 
   if (points.length < 2) {
     els.chart.innerHTML = `<text x="${width / 2}" y="${height / 2}" fill="#8b98ac" font-size="14" text-anchor="middle">No hay suficientes datos todavía para graficar</text>`;
+    els.chart.onmousemove = null;
+    els.chart.onmouseleave = null;
+    els.chart.ontouchstart = null;
+    els.chart.ontouchmove = null;
+    els.chart.ontouchend = null;
     return;
   }
 
@@ -68,11 +73,14 @@ function drawChart(rows) {
   const x = (i) => padding + (i / (points.length - 1)) * (width - padding * 2);
   const y = (v) => height - padding - ((v - min) / span) * (height - padding * 2);
 
-  const path = points.map((p, i) => `${i === 0 ? 'M' : 'L'} ${x(i).toFixed(1)} ${y(p.last).toFixed(1)}`).join(' ');
+  const coords = points.map((p, i) => ({ x: x(i), y: y(p.last), price: p.last, ts: p.captured_at }));
+
+  const path = coords.map((c, i) => `${i === 0 ? 'M' : 'L'} ${c.x.toFixed(1)} ${c.y.toFixed(1)}`).join(' ');
 
   const firstLabel = fmtDateTime(points[0].captured_at);
   const lastLabel = fmtDateTime(points[points.length - 1].captured_at);
 
+  els.chart.style.cursor = 'crosshair';
   els.chart.innerHTML = `
     <line x1="${padding}" y1="${height - padding}" x2="${width - padding}" y2="${height - padding}" stroke="#1e2c42" stroke-width="1" />
     <line x1="${padding}" y1="${padding}" x2="${padding}" y2="${height - padding}" stroke="#1e2c42" stroke-width="1" />
@@ -81,7 +89,83 @@ function drawChart(rows) {
     <text x="${padding}" y="${height - padding + 20}" fill="#8b98ac" font-size="12">${fmtPrice(min)}</text>
     <text x="${padding}" y="${height - 8}" fill="#8b98ac" font-size="11">${firstLabel}</text>
     <text x="${width - padding}" y="${height - 8}" fill="#8b98ac" font-size="11" text-anchor="end">${lastLabel}</text>
+    <line id="hover-guide" x1="0" y1="${padding}" x2="0" y2="${height - padding}" stroke="#34d399" stroke-width="1" stroke-dasharray="3,3" opacity="0" />
+    <circle id="hover-dot" r="4" fill="#34d399" stroke="#0b1220" stroke-width="1.5" opacity="0" />
+    <g id="hover-tooltip" opacity="0">
+      <rect id="hover-tooltip-bg" rx="6" ry="6" fill="#101c30" stroke="#1e2c42" stroke-width="1" />
+      <text id="hover-tooltip-price" fill="#e7ecf5" font-size="13" font-weight="700"></text>
+      <text id="hover-tooltip-date" fill="#8b98ac" font-size="11"></text>
+    </g>
   `;
+
+  const guide = els.chart.querySelector('#hover-guide');
+  const dot = els.chart.querySelector('#hover-dot');
+  const tooltip = els.chart.querySelector('#hover-tooltip');
+  const tooltipBg = els.chart.querySelector('#hover-tooltip-bg');
+  const tooltipPrice = els.chart.querySelector('#hover-tooltip-price');
+  const tooltipDate = els.chart.querySelector('#hover-tooltip-date');
+
+  function nearestIndex(svgX) {
+    const t = (svgX - padding) / (width - padding * 2);
+    const idx = Math.round(t * (coords.length - 1));
+    return Math.min(coords.length - 1, Math.max(0, idx));
+  }
+
+  function moveTooltip(clientX, clientY) {
+    const pt = els.chart.createSVGPoint();
+    pt.x = clientX;
+    pt.y = clientY;
+    const svgP = pt.matrixTransform(els.chart.getScreenCTM().inverse());
+
+    const c = coords[nearestIndex(svgP.x)];
+
+    guide.setAttribute('x1', c.x);
+    guide.setAttribute('x2', c.x);
+    guide.setAttribute('opacity', '1');
+
+    dot.setAttribute('cx', c.x);
+    dot.setAttribute('cy', c.y);
+    dot.setAttribute('opacity', '1');
+
+    const priceText = fmtPrice(c.price);
+    const dateText = fmtDateTime(c.ts);
+    tooltipPrice.textContent = priceText;
+    tooltipDate.textContent = dateText;
+
+    const priceWidth = tooltipPrice.getComputedTextLength();
+    const dateWidth = tooltipDate.getComputedTextLength();
+    const boxWidth = Math.max(priceWidth, dateWidth) + 20;
+    const boxHeight = 40;
+
+    let boxX = c.x + 10;
+    if (boxX + boxWidth > width - 4) boxX = c.x - boxWidth - 10;
+    let boxY = c.y - boxHeight - 10;
+    if (boxY < 4) boxY = c.y + 10;
+
+    tooltipBg.setAttribute('x', boxX);
+    tooltipBg.setAttribute('y', boxY);
+    tooltipBg.setAttribute('width', boxWidth);
+    tooltipBg.setAttribute('height', boxHeight);
+
+    tooltipPrice.setAttribute('x', boxX + 10);
+    tooltipPrice.setAttribute('y', boxY + 17);
+    tooltipDate.setAttribute('x', boxX + 10);
+    tooltipDate.setAttribute('y', boxY + 32);
+
+    tooltip.setAttribute('opacity', '1');
+  }
+
+  function hideTooltip() {
+    guide.setAttribute('opacity', '0');
+    dot.setAttribute('opacity', '0');
+    tooltip.setAttribute('opacity', '0');
+  }
+
+  els.chart.onmousemove = (e) => moveTooltip(e.clientX, e.clientY);
+  els.chart.onmouseleave = hideTooltip;
+  els.chart.ontouchstart = (e) => moveTooltip(e.touches[0].clientX, e.touches[0].clientY);
+  els.chart.ontouchmove = (e) => { e.preventDefault(); moveTooltip(e.touches[0].clientX, e.touches[0].clientY); };
+  els.chart.ontouchend = hideTooltip;
 }
 
 function renderTable(rows) {

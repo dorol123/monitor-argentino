@@ -328,7 +328,7 @@ tr.row-ask:hover { background: linear-gradient(90deg, rgba(248,113,113,0.24), tr
 .dot-bid { background: var(--accent); }
 .dot-ask { background: var(--red); }
 
-#chart { width: 100%; height: 260px; display: block; }
+#chart { width: 100%; height: 260px; display: block; touch-action: none; }
 
 .badge {
   font-size: 0.68rem;
